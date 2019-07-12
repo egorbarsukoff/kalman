@@ -128,13 +128,12 @@ namespace Kalman {
         template<class Control, template<class> class CovarianceBase>
         const State& predict( const SystemModelType<Control, CovarianceBase>& s, const Control& u )
         {
-            // Compute sigma points
             if(!computeSigmaPoints())
             {
-                // TODO: handle numerical error
-                assert(false);
+                P = toPositiveDefine(P);
+                computeSigmaPoints();
             }
-            
+
             // Compute predicted state
             x = this->template computeStatePrediction<Control, CovarianceBase>(s, u);
             
@@ -177,6 +176,13 @@ namespace Kalman {
         }
         
     protected:
+
+        template <typename MatrixType>
+        static MatrixType toPositiveDefine(const MatrixType& m) {
+            Eigen::JacobiSVD<MatrixType> svd(m, Eigen::ComputeFullU | Eigen::ComputeFullV);
+            return svd.matrixU() * svd.singularValues().cwiseMax(0).asDiagonal() * svd.matrixV().transpose();
+        }
+
         /**
          * @brief Compute sigma points from current state estimate and state covariance
          * 
